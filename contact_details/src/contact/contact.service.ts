@@ -1,4 +1,4 @@
-import { HttpException, Injectable } from '@nestjs/common';
+import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Contact } from './interfaces/contact.interface';
@@ -42,24 +42,15 @@ export class ContactService {
     return contact;
   }
 
-  public async putContactById(
+  public async updateContact(
     id: number,
-    propertyName: string,
-    propertyValue: string,
-  ): Promise<ContactDto> {
-    console.log('Updating contact:', { id, propertyName, propertyValue });
-    const contact = await this.contactModel
-      .findOneAndUpdate(
-        { id },
-        { [propertyName]: propertyValue },
-        { new: true },
-      )
-      .exec();
-    if (!contact) {
-      console.log('Contact not found:', id);
-      throw new HttpException('Not Found', 404);
+    updateContactDto: ContactDto,
+  ): Promise<Contact> {
+    const existingContact = await this.contactModel.findOne({ id });
+    if (!existingContact) {
+      throw new NotFoundException(`Contact with ID "${id}" not found`);
     }
-    console.log('Updated contact:', contact);
-    return contact;
+    Object.assign(existingContact, updateContactDto);
+    return existingContact.save();
   }
 }

@@ -1,13 +1,13 @@
-import React from 'react';
-import Layout from './components/Layout';
+// app/page.tsx
+import Layout from './components/Layout'; // Adjust the path as necessary
 import { fetchApi } from './utils/api';
 
-export default async function Page() {
+export default async function HomePage() {
   const contacts = await fetchApi('/contact');
 
   return (
     <Layout>
-      <h1></h1>
+      <div></div>
     </Layout>
   );
 }

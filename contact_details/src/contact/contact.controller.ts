@@ -6,15 +6,14 @@ import {
   HttpException,
   HttpStatus,
   Param,
+  ParseIntPipe,
   Post,
   Put,
-  Query,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
 import { ContactService } from './contact.service';
 import { ContactDto } from './contact.dto';
-import { ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
 
 @Controller('contact')
 export class ContactController {
@@ -50,41 +49,13 @@ export class ContactController {
   }
 
   @Put(':id')
-  @ApiParam({ name: 'id', required: true, description: 'Contact ID' })
-  @ApiQuery({
-    name: 'property_name',
-    required: true,
-    description: 'Property name to update',
-  })
-  @ApiQuery({
-    name: 'property_value',
-    required: true,
-    description: 'New value for the property',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'The updated contact',
-    type: ContactDto,
-  })
-  @ApiResponse({ status: 404, description: 'Contact not found' })
-  @UsePipes(new ValidationPipe({ transform: true }))
-  public async putContactById(
-    @Param('id') id: number,
-    @Query('property_name') propertyName: string,
-    @Query('property_value') propertyValue: string,
-  ): Promise<ContactDto> {
-    console.log('Received PUT request:', { id, propertyName, propertyValue });
-    try {
-      const result = await this.contactService.putContactById(
-        id,
-        propertyName,
-        propertyValue,
-      );
-      console.log('Updated contact:', result);
-      return result;
-    } catch (error) {
-      console.error('Error updating contact:', error);
-      throw error;
-    }
+  @Put(':id')
+  public async updateContact(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateContactDto: ContactDto,
+  ) {
+    console.log(`Received update request for contact ID: ${id}`);
+    console.log('Update data:', updateContactDto);
+    return this.contactService.updateContact(id, updateContactDto);
   }
 }
