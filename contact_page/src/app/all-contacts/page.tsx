@@ -92,8 +92,7 @@ export default function Page() {
   };
 
   const handleEdit = (contact) => {
-    setEditedContact({ 
-      _id: contact._id, // Ensure we include the MongoDB ObjectId
+    setEditedContact({
       id: contact.id,
       FirstName: contact.FirstName,
       LastName: contact.LastName,
@@ -109,17 +108,15 @@ export default function Page() {
     try {
       const numericId = parseInt(editedContact.id, 10);
       if (isNaN(numericId)) {
-        throw new Error('Invalid contact ID');
+        setError('ID must be a number');
+        setIsLoading(false);
+        return;
       }
   
-      console.log('Updating contact with ID:', numericId); // Add this log
-  
-      const response = await fetch(`http://localhost:4000/contact/${numericId}`, {
+      const response = await fetchApi(`/contact/${numericId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
+          id: numericId, // Include the ID in the request body
           FirstName: editedContact.FirstName,
           LastName: editedContact.LastName,
           Email: editedContact.Email,
@@ -127,17 +124,10 @@ export default function Page() {
         }),
       });
   
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Error updating contact: ${response.status} ${response.statusText}. ${JSON.stringify(errorData)}`);
-      }
-  
-      const updatedContact = await response.json();
-      console.log('Updated contact:', updatedContact); // Add this log
-  
+      const updatedContact = await response;
       // Update frontend contact list
       const updatedContacts = contacts.map((contact) =>
-        contact.id === editedContact.id ? updatedContact : contact
+        contact.id === numericId ? updatedContact : contact
       );
       setContacts(updatedContacts);
       setIsEditing(false);
@@ -148,7 +138,7 @@ export default function Page() {
       setIsLoading(false);
     }
   };
-  
+
   const handleCancel = () => {
     setIsEditing(false);
     setEditedContact({
@@ -160,198 +150,199 @@ export default function Page() {
     });
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setEditedContact({
-      ...editedContact,
-      [name]: value,
-    });
-  };
-
   return (
     <Layout>
-      <Flex alignItems="center" justifyContent="space-between" mb={4}>
-        {/* Search Bar */}
-        <Flex alignItems="center" ml={4}>
-          <Input
-            placeholder="Search contact by ID..."
-            value={searchId}
-            onChange={(e) => setSearchId(e.target.value)}
-            mr={2}
-          />
-          <IconButton
-            aria-label="Search by ID"
-            icon={<SearchIcon />}
-            onClick={handleSearchById}
-            variant="outline"
-            size="sm"
-          />
+      <Box padding="20px">
+        <Flex justify="space-between" align="center" mb="20px">
+          <Text fontSize="2xl" fontWeight="bold">
+            Contacts
+          </Text>
+          <Flex>
+            <Input
+              placeholder="Search by ID"
+              value={searchId}
+              onChange={(e) => setSearchId(e.target.value)}
+              marginRight="10px"
+            />
+            <IconButton
+              icon={<SearchIcon />}
+              onClick={handleSearchById}
+              isLoading={isLoading}
+              aria-label="Search Contact"
+            />
+          </Flex>
+          <Link href="/all-contacts/new-contact">
+            <Button
+              leftIcon={<AddIcon />}
+              colorScheme="teal"
+              variant="solid"
+              ml={4}
+            >
+              New Contact
+            </Button>
+          </Link>
         </Flex>
-        <Link href="/all-contacts/new-contact" passHref>
-          <Button
-            rightIcon={<AddIcon />}
-            colorScheme="blue"
-            variant="solid"
-          >
-            New Contact
-          </Button>
-        </Link>
-      </Flex>
 
-      {isLoading ? (
-        <Text>Loading...</Text>
-      ) : error ? (
-        <Text color="red.500">{error}</Text>
-      ) : (
-        <Box bg="white" shadow="md" rounded="lg" overflow="hidden">
-          <Table variant="simple">
-            <Thead bg="gray.100">
-              <Tr>
-                <Th>ID</Th>
-                <Th>First Name</Th>
-                <Th>Last Name</Th>
-                <Th>Email</Th>
-                <Th>Phone Number</Th>
-                <Th>Action</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {searchResult ? (
-                <Tr key={searchResult.id}>
-                  <Td>{searchResult.id}</Td>
-                  <Td>{searchResult.FirstName}</Td>
-                  <Td>{searchResult.LastName}</Td>
-                  <Td>{searchResult.Email}</Td>
-                  <Td>{searchResult.Phone}</Td>
-                  <Td>
-                    {isEditing ? (
-                      <>
+        {error && (
+          <Box mb="20px">
+            <Text color="red.500">{error}</Text>
+          </Box>
+        )}
+
+        {isLoading ? (
+          <Text>Loading...</Text>
+        ) : (
+          <>
+            {searchResult ? (
+              <Box mb="20px">
+                <Text>Search Result:</Text>
+                <Table variant="simple" mt="10px">
+                  <Thead>
+                    <Tr>
+                      <Th>ID</Th>
+                      <Th>First Name</Th>
+                      <Th>Last Name</Th>
+                      <Th>Email</Th>
+                      <Th>Phone</Th>
+                      <Th>Actions</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    <Tr>
+                      <Td>{searchResult.id}</Td>
+                      <Td>{searchResult.FirstName}</Td>
+                      <Td>{searchResult.LastName}</Td>
+                      <Td>{searchResult.Email}</Td>
+                      <Td>{searchResult.Phone}</Td>
+                      <Td>
                         <IconButton
-                          aria-label="Save"
-                          icon={<CheckIcon />}
-                          onClick={handleSave}
-                          variant="ghost"
-                          size="sm"
-                          mr={2}
+                          icon={<EditIcon />}
+                          onClick={() => handleEdit(searchResult)}
+                          aria-label="Edit Contact"
                         />
                         <IconButton
-                          aria-label="Cancel"
-                          icon={<CloseIcon />}
-                          onClick={handleCancel}
-                          variant="ghost"
-                          size="sm"
+                          icon={<DeleteIcon />}
+                          onClick={() => handleDelete(searchResult.id)}
+                          aria-label="Delete Contact"
+                          ml="10px"
                         />
-                      </>
-                    ) : (
-                      <IconButton
-                        aria-label="Edit"
-                        icon={<EditIcon />}
-                        onClick={() => handleEdit(searchResult)}
-                        variant="ghost"
-                        size="sm"
-                      />
-                    )}
-                    <IconButton
-                      aria-label="Delete"
-                      icon={<DeleteIcon />}
-                      onClick={() => handleDelete(searchResult.id)}
-                      variant="ghost"
-                      size="sm"
-                    />
-                  </Td>
-                </Tr>
-              ) : contacts.map((contact) => (
-                <Tr key={contact.id}>
-                  <Td>{contact.id}</Td>
-                  <Td>
-                    {isEditing && editedContact.id === contact.id ? (
-                      <Input
-                        name="FirstName"
-                        value={editedContact.FirstName}
-                        onChange={handleInputChange}
-                      />
-                    ) : (
-                      contact.FirstName
-                    )}
-                  </Td>
-                  <Td>
-                    {isEditing && editedContact.id === contact.id ? (
-                      <Input
-                        name="LastName"
-                        value={editedContact.LastName}
-                        onChange={handleInputChange}
-                      />
-                    ) : (
-                      contact.LastName
-                    )}
-                  </Td>
-                  <Td>
-                    {isEditing && editedContact.id === contact.id ? (
-                      <Input
-                        name="Email"
-                        value={editedContact.Email}
-                        onChange={handleInputChange}
-                      />
-                    ) : (
-                      contact.Email
-                    )}
-                  </Td>
-                  <Td>
-                    {isEditing && editedContact.id === contact.id ? (
-                      <Input
-                        name="Phone"
-                        value={editedContact.Phone}
-                        onChange={handleInputChange}
-                      />
-                    ) : (
-                      contact.Phone
-                    )}
-                  </Td>
-                  <Td>
-                    {isEditing && editedContact.id === contact.id ? (
-                      <>
+                      </Td>
+                    </Tr>
+                  </Tbody>
+                </Table>
+              </Box>
+            ) : (
+              <Table variant="simple" mt="20px">
+                <Thead>
+                  <Tr>
+                    <Th>ID</Th>
+                    <Th>First Name</Th>
+                    <Th>Last Name</Th>
+                    <Th>Email</Th>
+                    <Th>Phone</Th>
+                    <Th>Actions</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {contacts.map((contact) => (
+                    <Tr key={contact.id}>
+                      <Td>{contact.id}</Td>
+                      <Td>{contact.FirstName}</Td>
+                      <Td>{contact.LastName}</Td>
+                      <Td>{contact.Email}</Td>
+                      <Td>{contact.Phone}</Td>
+                      <Td>
                         <IconButton
-                          aria-label="Save"
-                          icon={<CheckIcon />}
-                          onClick={handleSave}
-                          variant="ghost"
-                          size="sm"
-                          mr={2}
-                        />
-                        <IconButton
-                          aria-label="Cancel"
-                          icon={<CloseIcon />}
-                          onClick={handleCancel}
-                          variant="ghost"
-                          size="sm"
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <IconButton
-                          aria-label="Edit"
                           icon={<EditIcon />}
                           onClick={() => handleEdit(contact)}
-                          variant="ghost"
-                          size="sm"
-                          mr={2}
+                          aria-label="Edit Contact"
                         />
                         <IconButton
-                          aria-label="Delete"
                           icon={<DeleteIcon />}
                           onClick={() => handleDelete(contact.id)}
-                          variant="ghost"
-                          size="sm"
+                          aria-label="Delete Contact"
+                          ml="10px"
                         />
-                      </>
-                    )}
-                  </Td>
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        </Box>
-      )}
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            )}
+          </>
+        )}
+
+        {isEditing && (
+          <Box mt="20px">
+            <Text fontSize="xl" mb="10px">
+              Edit Contact
+            </Text>
+            <Flex direction="column">
+              <Input
+                placeholder="ID"
+                value={editedContact.id}
+                onChange={(e) =>
+                  setEditedContact({ ...editedContact, id: e.target.value })
+                }
+                mb="10px"
+                isDisabled
+              />
+              <Input
+                placeholder="First Name"
+                value={editedContact.FirstName}
+                onChange={(e) =>
+                  setEditedContact({ ...editedContact, FirstName: e.target.value })
+                }
+                mb="10px"
+              />
+              <Input
+                placeholder="Last Name"
+                value={editedContact.LastName}
+                onChange={(e) =>
+                  setEditedContact({ ...editedContact, LastName: e.target.value })
+                }
+                mb="10px"
+              />
+              <Input
+                placeholder="Email"
+                value={editedContact.Email}
+                onChange={(e) =>
+                  setEditedContact({ ...editedContact, Email: e.target.value })
+                }
+                mb="10px"
+              />
+              <Input
+                placeholder="Phone"
+                value={editedContact.Phone}
+                onChange={(e) =>
+                  setEditedContact({ ...editedContact, Phone: e.target.value })
+                }
+                mb="10px"
+              />
+              <Flex justify="flex-end">
+                <Button
+                  colorScheme="teal"
+                  variant="solid"
+                  leftIcon={<CheckIcon />}
+                  onClick={handleSave}
+                  isLoading={isLoading}
+                  mr="10px"
+                >
+                  Save
+                </Button>
+                <Button
+                  colorScheme="red"
+                  variant="solid"
+                  leftIcon={<CloseIcon />}
+                  onClick={handleCancel}
+                >
+                  Cancel
+                </Button>
+              </Flex>
+            </Flex>
+          </Box>
+        )}
+      </Box>
     </Layout>
   );
 }

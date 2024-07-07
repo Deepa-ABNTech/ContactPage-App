@@ -49,7 +49,6 @@ export class ContactController {
   }
 
   @Put(':id')
-  @Put(':id')
   public async updateContact(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateContactDto: ContactDto,

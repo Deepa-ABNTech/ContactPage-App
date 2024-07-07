@@ -46,11 +46,14 @@ export class ContactService {
     id: number,
     updateContactDto: ContactDto,
   ): Promise<Contact> {
+    console.log(`Attempting to update contact with ID: ${id}`);
     const existingContact = await this.contactModel.findOne({ id });
     if (!existingContact) {
+      console.log(`Contact with ID: ${id} not found`);
       throw new NotFoundException(`Contact with ID "${id}" not found`);
     }
     Object.assign(existingContact, updateContactDto);
+    console.log(`Updated contact: ${existingContact}`);
     return existingContact.save();
   }
 }
