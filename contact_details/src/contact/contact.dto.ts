@@ -6,14 +6,16 @@ export class ContactDto {
   id?: number;
 
   @IsString()
-  @Matches(/^[a-zA-Z]+$/, {
-    message: 'FirstName must contain only alphabets and it should not be empty',
+  @Matches(/^[a-zA-Z\s]+$/, {
+    message:
+      'FirstName must contain only alphabets and spaces, and it should not be empty',
   })
   readonly FirstName: string;
 
   @IsString()
-  @Matches(/^[a-zA-Z]+$/, {
-    message: 'LastName must contain only alphabets and it should not be empty',
+  @Matches(/^[a-zA-Z\s]+$/, {
+    message:
+      'LastName must contain only alphabets and spaces, and it should not be empty',
   })
   readonly LastName: string;
 
@@ -28,4 +30,8 @@ export class ContactDto {
   @IsString()
   @Matches(/^[0-9]{10}$/, { message: 'Phone must be a string of 10 digits' })
   readonly Phone: string;
+
+  @IsString()
+  @IsOptional()
+  readonly PictureUrl?: string;
 }

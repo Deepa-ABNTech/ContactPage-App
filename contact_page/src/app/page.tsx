@@ -7,7 +7,7 @@ export default async function HomePage() {
 
   return (
     <Layout>
-      <div></div>
+      <h1>Home</h1>
     </Layout>
   );
 }

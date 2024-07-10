@@ -13,8 +13,16 @@ import {
   Tr,
   Th,
   Td,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  Avatar,
 } from '@chakra-ui/react';
-import { AddIcon, EditIcon, DeleteIcon, SearchIcon, CheckIcon, CloseIcon } from '@chakra-ui/icons';
+import { AddIcon, EditIcon, DeleteIcon, SearchIcon } from '@chakra-ui/icons';
 import Layout from '../components/Layout';
 import { fetchApi } from '../utils/api';
 import Link from 'next/link';
@@ -25,8 +33,16 @@ export default function Page() {
   const [error, setError] = useState('');
   const [searchId, setSearchId] = useState('');
   const [searchResult, setSearchResult] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editedContact, setEditedContact] = useState({
+    id: '',
+    FirstName: '',
+    LastName: '',
+    Email: '',
+    Phone: '',
+    PictureUrl: '',
+  });
+  const [errors, setErrors] = useState({
     id: '',
     FirstName: '',
     LastName: '',
@@ -98,11 +114,43 @@ export default function Page() {
       LastName: contact.LastName,
       Email: contact.Email,
       Phone: contact.Phone,
+      PictureUrl: contact.PictureUrl || '',
     });
-    setIsEditing(true);
+    setIsModalOpen(true);
+  };
+
+  const validateForm = () => {
+    const newErrors = {
+      FirstName: '',
+      LastName: '',
+      Email: '',
+      Phone: '',
+    };
+
+    if (editedContact.FirstName && !/^[A-Za-z\s]+$/.test(editedContact.FirstName)) {
+      newErrors.FirstName = 'First name must contain only alphabetic characters and spaces';
+    }
+
+    if (editedContact.LastName && !/^[A-Za-z\s]+$/.test(editedContact.LastName)) {
+      newErrors.LastName = 'Last name must contain only alphabetic characters and spaces';
+    }
+
+    if (editedContact.Email && !/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(editedContact.Email)) {
+      newErrors.Email = 'Please enter a valid email address';
+    }
+
+    if (editedContact.Phone && !/^\d{10}$/.test(editedContact.Phone)) {
+      newErrors.Phone = 'Phone number must be 10 digits';
+    }
+
+    setErrors(newErrors);
+    return Object.values(newErrors).every(error => error === '');
   };
 
   const handleSave = async () => {
+    if (!validateForm()) {
+      return;
+    }
     setIsLoading(true);
     setError('');
     try {
@@ -116,21 +164,21 @@ export default function Page() {
       const response = await fetchApi(`/contact/${numericId}`, {
         method: 'PUT',
         body: JSON.stringify({
-          id: numericId, // Include the ID in the request body
+          id: numericId,
           FirstName: editedContact.FirstName,
           LastName: editedContact.LastName,
           Email: editedContact.Email,
           Phone: editedContact.Phone,
+          PictureUrl: editedContact.PictureUrl,
         }),
       });
   
       const updatedContact = await response;
-      // Update frontend contact list
       const updatedContacts = contacts.map((contact) =>
         contact.id === numericId ? updatedContact : contact
       );
       setContacts(updatedContacts);
-      setIsEditing(false);
+      setIsModalOpen(false);
     } catch (error) {
       console.error('Error updating contact:', error);
       setError(`Error updating contact: ${error.message}`);
@@ -140,9 +188,16 @@ export default function Page() {
   };
 
   const handleCancel = () => {
-    setIsEditing(false);
+    setIsModalOpen(false);
     setEditedContact({
       id: '',
+      FirstName: '',
+      LastName: '',
+      Email: '',
+      Phone: '',
+      PictureUrl: '',
+    });
+    setErrors({
       FirstName: '',
       LastName: '',
       Email: '',
@@ -150,13 +205,25 @@ export default function Page() {
     });
   };
 
+  const handlePictureChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditedContact({ ...editedContact, PictureUrl: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemovePicture = () => {
+    setEditedContact({ ...editedContact, PictureUrl: '' });
+  };
+
   return (
     <Layout>
       <Box padding="20px">
         <Flex justify="space-between" align="center" mb="20px">
-          <Text fontSize="2xl" fontWeight="bold">
-            Contacts
-          </Text>
           <Flex>
             <Input
               placeholder="Search by ID"
@@ -195,7 +262,6 @@ export default function Page() {
           <>
             {searchResult ? (
               <Box mb="20px">
-                <Text>Search Result:</Text>
                 <Table variant="simple" mt="10px">
                   <Thead>
                     <Tr>
@@ -204,6 +270,7 @@ export default function Page() {
                       <Th>Last Name</Th>
                       <Th>Email</Th>
                       <Th>Phone</Th>
+                      <Th>Avatar</Th>
                       <Th>Actions</Th>
                     </Tr>
                   </Thead>
@@ -214,6 +281,13 @@ export default function Page() {
                       <Td>{searchResult.LastName}</Td>
                       <Td>{searchResult.Email}</Td>
                       <Td>{searchResult.Phone}</Td>
+                      <Td>
+                  <Avatar
+                    size="md"
+                    src={searchResult.PictureUrl}
+                    name={`${searchResult.FirstName} ${searchResult.LastName}`}
+                  />
+                </Td>
                       <Td>
                         <IconButton
                           icon={<EditIcon />}
@@ -240,6 +314,7 @@ export default function Page() {
                     <Th>Last Name</Th>
                     <Th>Email</Th>
                     <Th>Phone</Th>
+                    <Th>Avatar</Th>
                     <Th>Actions</Th>
                   </Tr>
                 </Thead>
@@ -251,6 +326,13 @@ export default function Page() {
                       <Td>{contact.LastName}</Td>
                       <Td>{contact.Email}</Td>
                       <Td>{contact.Phone}</Td>
+                      <Td>
+                  <Avatar
+                    size="md"
+                    src={contact.PictureUrl}
+                    name={`${contact.FirstName} ${contact.LastName}`}
+                  />
+                </Td>
                       <Td>
                         <IconButton
                           icon={<EditIcon />}
@@ -272,76 +354,119 @@ export default function Page() {
           </>
         )}
 
-        {isEditing && (
-          <Box mt="20px">
-            <Text fontSize="xl" mb="10px">
-              Edit Contact
-            </Text>
-            <Flex direction="column">
-              <Input
-                placeholder="ID"
-                value={editedContact.id}
-                onChange={(e) =>
-                  setEditedContact({ ...editedContact, id: e.target.value })
-                }
-                mb="10px"
-                isDisabled
-              />
+        <Modal isOpen={isModalOpen} onClose={handleCancel}>
+          <ModalOverlay />
+          <ModalContent>
+            <ModalHeader>Edit Contact</ModalHeader>
+            <ModalCloseButton />
+            <ModalBody>
+              <Flex direction="column" alignItems="center">
+                <Box mb="10px" position="relative">
+                  <Avatar
+                    size="2xl"
+                    src={editedContact.PictureUrl}
+                    name={`${editedContact.FirstName} ${editedContact.LastName}`}
+                  />
+                  <Box
+                    position="absolute"
+                    bottom="0"
+                    right="0"
+                    backgroundColor="gray.100"
+                    borderRadius="full"
+                    cursor="pointer"
+                    onClick={() => document.getElementById('file-input').click()}
+                  >
+                    <IconButton
+                      icon={<AddIcon />}
+                      borderRadius="full"
+                      colorScheme="teal"
+                      aria-label="Upload Picture"
+                    />
+                    <Input
+                      id="file-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePictureChange}
+                      display="none"
+                    />
+                  </Box>
+                </Box>
+                {editedContact.PictureUrl && (
+                  <Button
+                    colorScheme="red"
+                    variant="outline"
+                    onClick={handleRemovePicture}
+                  >
+                    Remove Picture
+                  </Button>
+                )}
+              </Flex>
+              <Box mb="20px">
               <Input
                 placeholder="First Name"
                 value={editedContact.FirstName}
-                onChange={(e) =>
-                  setEditedContact({ ...editedContact, FirstName: e.target.value })
-                }
-                mb="10px"
+                onChange={(e) => {
+                  setEditedContact({ ...editedContact, FirstName: e.target.value });
+                  validateForm();
+                }}
+                isInvalid={!!errors.FirstName}
+                errorBorderColor="red.500"
               />
+              {errors.FirstName && <Text color="red.500">{errors.FirstName}</Text>}
+            </Box>
+            <Box mb="20px">
               <Input
                 placeholder="Last Name"
                 value={editedContact.LastName}
-                onChange={(e) =>
-                  setEditedContact({ ...editedContact, LastName: e.target.value })
-                }
-                mb="10px"
+                onChange={(e) => {
+                  setEditedContact({ ...editedContact, LastName: e.target.value });
+                  validateForm();
+                }}
+                isInvalid={!!errors.LastName}
+                errorBorderColor="red.500"
               />
+              {errors.LastName && <Text color="red.500">{errors.LastName}</Text>}
+            </Box>
+            <Box mb="20px">
               <Input
                 placeholder="Email"
                 value={editedContact.Email}
-                onChange={(e) =>
-                  setEditedContact({ ...editedContact, Email: e.target.value })
-                }
-                mb="10px"
+                onChange={(e) => {
+                  setEditedContact({ ...editedContact, Email: e.target.value });
+                  validateForm();
+                }}
+                isInvalid={!!errors.Email}
+                errorBorderColor="red.500"
               />
+              {errors.Email && <Text color="red.500">{errors.Email}</Text>}
+            </Box>
+            <Box mb="20px">
               <Input
                 placeholder="Phone"
                 value={editedContact.Phone}
-                onChange={(e) =>
-                  setEditedContact({ ...editedContact, Phone: e.target.value })
-                }
-                mb="10px"
+                onChange={(e) => {
+                  setEditedContact({ ...editedContact, Phone: e.target.value });
+                  validateForm();
+                }}
+                isInvalid={!!errors.Phone}
+                errorBorderColor="red.500"
               />
-              <Flex justify="flex-end">
-                <Button
-                  colorScheme="teal"
-                  variant="solid"
-                  leftIcon={<CheckIcon />}
-                  onClick={handleSave}
-                  isLoading={isLoading}
-                  mr="10px"
-                >
-                  Save
-                </Button>
-                <Button
-                  colorScheme="red"
-                  variant="solid"
-                  leftIcon={<CloseIcon />}
-                  onClick={handleCancel}
-                >
-                  Cancel
-                </Button>
-              </Flex>
-            </Flex>
-          </Box>
-        )}
+              {errors.Phone && <Text color="red.500">{errors.Phone}</Text>}
+            </Box>
+            </ModalBody>
+            <ModalFooter>
+              <Button
+                colorScheme="blue"
+                onClick={handleSave}
+                isLoading={isLoading}
+                mr="3"
+              >
+                Save
+              </Button>
+              <Button onClick={handleCancel}>Cancel</Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
       </Box>
     </Layout>
   );
